@@ -9,16 +9,22 @@ jobs:
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          printf "%s" "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 54.87.134.204 >> ~/.ssh/known_hosts
 
       - name: Deploy to EC2
         run: |
-          ssh ubuntu@54.87.134.204 << 'EOF'
-            cd ~/app || mkdir ~/app && cd ~/app
-            git clone -q https://github.com/Thamizharasan-s24/cicd.git || (cd cicd && git pull)
-            cd cicd
+          ssh -o StrictHostKeyChecking=no ubuntu@54.87.134.204 << 'EOF'
+            cd ~/app || mkdir -p ~/app && cd ~/app
+            if [ -d "cicd" ]; then
+              cd cicd
+              git pull origin main
+            else
+              git clone https://github.com/Thamizharasan-s24/cicd.git
+              cd cicd
+            fi
+            chmod +x build.sh test.sh deploy.sh
             ./build.sh
             ./test.sh  # Run tests before deployment
             ./deploy.sh
